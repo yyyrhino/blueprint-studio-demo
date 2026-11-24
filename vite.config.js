@@ -8,7 +8,7 @@ export default defineConfig({
   publicDir: false,
   cacheDir: '.vite-cache',
   plugins: [
-    react(),
+    react({jsxImportSource:"/src/localized"}),
     {
       name: 'github-pages-nojekyll',
       generateBundle() {

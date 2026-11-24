@@ -1,3 +1,4 @@
+import {t,getLanguage,setLanguage} from './i18n.js';
 import React,{useEffect,useMemo,useReducer,useState} from 'react';
 import {CATALOG,ROUNDS,createGame,reducer,getPlan,evaluate,availableOffers,buyPrice,sellPrice,upgradePrice,accessibility,getFootprint} from './game.js';
 import Plan from './Plan.jsx';
@@ -11,6 +12,9 @@ const number=v=>v.toLocaleString();
 const spatial=c=>['function','circulation'].includes(c?.category);
 
 export default function App(){
+ const [language,updateLanguage]=useState(getLanguage);
+ useEffect(()=>{setLanguage(language)},[language]);
+ const changeLanguage=()=>{const next=language==='zh'?'en':'zh';setLanguage(next);updateLanguage(next)};
  const [state,dispatch]=useReducer(reducer,undefined,createGame);
  const [view,setView]=useState('library'),[filter,setFilter]=useState('all');
  const [selected,setSelected]=useState('office'),[rotation,setRotation]=useState(0),[activeUid,setActiveUid]=useState(null);
@@ -26,17 +30,17 @@ export default function App(){
  useEffect(()=>{if(state.phase!=='won'){setSolid(false);return}const t=setTimeout(()=>setSolid(true),1100);return()=>clearTimeout(t)},[state.phase]);
  const choose=id=>{setSelected(id);setErase(false);setActiveUid(null);setRotation(0)};
  const equip=id=>{dispatch({type:'EQUIP',id});choose(id)};
- const unequip=id=>{if(state.patches[id]&&!window.confirm('卸下会撤回这张蓝图的本轮修改，已通过评审的方案保留。继续吗？'))return;dispatch({type:'UNEQUIP',id})};
+ const unequip=id=>{if(state.patches[id]&&!window.confirm(t('卸下会撤回这张蓝图的本轮修改，已通过评审的方案保留。继续吗？')))return;dispatch({type:'UNEQUIP',id})};
  const place=(id,x,y,r=rotation)=>{if(editing){dispatch({type:'PLACE',id,x,y,rotation:r});setActiveUid(null)}};
  const selectItem=uid=>{setActiveUid(uid);const item=plan.items.find(i=>i.uid===uid);if(item){setSelected(item.id);setRotation(item.rotation||0)}};
  const next=()=>{dispatch({type:'NEXT'});setView('build');setActiveUid(null);setErase(false)};
- const restart=()=>{if(!window.confirm('重新开局会清空本次试玩，继续吗？'))return;dispatch({type:'RESTART'});setView('library');choose('office');setProjection('plan')};
+ const restart=()=>{if(!window.confirm(t('重新开局会清空本次试玩，继续吗？')))return;dispatch({type:'RESTART'});setView('library');choose('office');setProjection('plan')};
  const exportDrawing=()=>{const svg=document.querySelector('.final-model svg')||document.querySelector('.plan-drawing svg');if(!svg)return;const copy=svg.cloneNode(true);copy.setAttribute('xmlns','http://www.w3.org/2000/svg');const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='构想事务所-方案模型.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
  const stageStart=()=>{if(editing){setView('build');return}dispatch({type:'ENTER_ROUND'});setView('library')};
  const leaveShop=()=>{dispatch({type:'LEAVE_SHOP'});setView('library');setFilter('all')};
  function shopCard(c){const level=state.owned[c.id]||state.mastery[c.id]||1;return <BlueprintCard key={c.id} card={c} level={level}>{state.owned[c.id]?<><button disabled={c.category==='circulation'||level>=3||state.money<upgradePrice(state,c.id)} onClick={()=>dispatch({type:'UPGRADE',id:c.id})}>{c.category==='circulation'?'固定规格':level>=3?'熟练度已满':`进修 ${upgradePrice(state,c.id)} ◉`}</button><button onClick={()=>dispatch({type:'SELL',id:c.id})}>出售 +{sellPrice(state,c.id)}</button></>:<button className="primary" disabled={state.money<buyPrice(state,c.id)} onClick={()=>dispatch({type:'BUY',id:c.id})}>解锁 {buyPrice(state,c.id)} ◉</button>}</BlueprintCard>}
  return <div className={`app phase-${state.phase}`}>
- <header className="topbar"><div className="brand"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 29V13L21 4 36 12V29L20 37ZM4 13 20 22 36 12M20 22V37M9 28V16L17 20V33M25 17v-7l7 4v13"/></svg><div><h1>构想事务所</h1><span>BLUEPRINT STUDIO</span></div></div><div className="round-track">{ROUNDS.map((r,i)=><div className={`step ${i===state.round?'current':''} ${state.history.some(h=>h.round===i)?'done':''}`} key={r.name}><b>{state.history.some(h=>h.round===i)?'✓':`0${i+1}`}</b><span>{r.name}</span></div>)}</div><div className="resources"><span className="money" title="局内金币，用于解锁与进修">◉ <b data-testid="money">{state.money}</b></span><span className="hearts" aria-label={`信誉 ${state.hearts}`}>{'♥'.repeat(Math.max(0,state.hearts))}<i>{'♡'.repeat(3-Math.max(0,state.hearts))}</i></span><button className="icon-button" onClick={()=>setHelp(true)} aria-label="玩法说明">?</button></div></header>
+ <header className="topbar"><div className="brand"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 29V13L21 4 36 12V29L20 37ZM4 13 20 22 36 12M20 22V37M9 28V16L17 20V33M25 17v-7l7 4v13"/></svg><div><h1>构想事务所</h1><span>BLUEPRINT STUDIO</span></div></div><div className="round-track">{ROUNDS.map((r,i)=><div className={`step ${i===state.round?'current':''} ${state.history.some(h=>h.round===i)?'done':''}`} key={r.name}><b>{state.history.some(h=>h.round===i)?'✓':`0${i+1}`}</b><span>{r.name}</span></div>)}</div><div className="resources"><button className="language-toggle" onClick={changeLanguage} aria-label="Switch language" lang="en">{language==='zh'?'English':'中文'}</button><span className="money" title="局内金币，用于解锁与进修">◉ <b data-testid="money">{state.money}</b></span><span className="hearts" aria-label={`信誉 ${state.hearts}`}>{'♥'.repeat(Math.max(0,state.hearts))}<i>{'♡'.repeat(3-Math.max(0,state.hearts))}</i></span><button className="icon-button" onClick={()=>setHelp(true)} aria-label="玩法说明">?</button></div></header>
  <nav className="navigation" aria-label="主要界面">{[['progress','01','评审进程'],['shop','02','灵感商店'],['library','03','蓝图装备'],['build','04','方案搭建']].map(([v,n,name])=><button key={v} className={activeView===v?'active':''} disabled={state.phase==='shop'?v!=='shop':state.phase==='progress'?v!=='progress':!editing||v==='shop'} onClick={()=>setView(v)}><small>{n}</small>{name}</button>)}<button className="restart" onClick={restart}>重新开局</button></nav>
  <main>
  {activeView==='progress'?<section className="progress-view"><div className="view-heading"><div><span className="eyebrow">项目 01 / 城市办公楼</span><h2>每一轮，让方案更进一步。</h2><p>固定场地，三次评审。上一轮的成果会成为下一轮的起点。</p></div><span className="project-stamp">06 × 06<br/><small>固定轴网 / 半格布置</small></span></div><div className="stage-grid">{ROUNDS.map((r,i)=>{const history=state.history.find(h=>h.round===i),current=i===state.round;return <article key={r.name} className={`stage-card ${current?'current':''} ${history?'completed':''}`}><div className="stage-top"><span>评审 / 0{i+1}</span><span>{history?'已通过':current?'当前节点':'待开启'}</span></div><CardArt id={['steel','office','lowe'][i]}/><h3>{r.name}</h3><p>{r.brief}</p><dl><div><dt>目标设计费</dt><dd>{number(r.target)}</dd></div><div><dt>可用蓝图槽</dt><dd>{r.slots} 个</dd></div></dl>{history?<div className="stage-result">✓ 已交付 <b>{number(history.total)}</b></div>:current?<button className="primary" onClick={stageStart}>{editing?'返回本轮设计':state.history.length===0?'进入项目 · 领取灵感':'进入本轮 · 整理蓝图'} →</button>:<div className="future-label">前一轮通过后开启</div>}</article>})}</div><p className="page-note">设计费用于评审，金币用于购牌。主题逐轮加入，前面的要求持续有效。</p></section>
